@@ -1,0 +1,249 @@
+---
+title: "STAT 424 HW4"
+subtitle: "Fall 2020"
+output:
+  pdf_document: 
+    fig_crop: no
+  word_document: default
+---
+
+## Instructions
+
+1. Submit your solution on Canvas as a pdf file before *October 23 at 11:59pm*.
+2. Use R for all computation, and include your code. 
+3. We recommend you start with the template `hw4.Rmd` file on Canvas.
+
+## Rubric
+
+* [30 points] One problem below will be graded for,
+  - [15 points] Correctness. Are all parts answered correctly?
+  - [15 points] Clarity. Are all answers justified? For questions with a coding
+  component, is code provided, and is it readable?
+* [20 = 4 * 5 points] Four problems below will be graded on completeness.
+* Total: 50 points
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("ggplot2")
+library("crossdes")
+library("dplyr")
+```
+
+## Problems
+
+1. [DAE 4.42] An engineer is studying the mileage performance characteristics of
+five types of gasoline additives. Ideally, car type would be used as a blocking
+variable. However, because of time constraints, a complete design is impossible.
+The following balanced design is run,
+
+```{r}
+mileage <- data.frame(
+  additive = rep(1:5, each = 4),
+  car = c(2, 3, 4, 5, 1, 2, 4, 5, 1, 3, 4, 5, 1, 2, 3, 4, 1, 2, 3, 5),
+  mileage = c(17, 14, 13, 12, 14, 14, 13, 10, 12, 13, 12, 9, 14, 11, 11, 12, 11, 12, 10, 8)
+)
+mileage$additive=as.factor(mileage$additive)
+mileage$car=as.factor(mileage$car)
+
+ggplot(mileage) +
+  geom_point(aes(x = additive, y = mileage, col = car), position = position_jitter(w = 0.1)) +
+  scale_color_brewer(palette = "Set2")
+
+ggplot(mileage) +
+  geom_text(aes(x = car, y = mileage, col = car, label = additive), position = position_jitter(w = 0.1)) +
+  scale_color_brewer(palette = "Set2")
+```
+
+Analyze data from the experiment (at $\alpha = 0.05$ and draw conclusions).
+
+```{r}
+fit1 <- lm(mileage ~ ., data = mileage)
+anova(fit1)
+```
+
+Since the p-values for additive and car are lower than the alpha value of 0.05, they
+significantly affect the data.
+
+
+2. [DAE 4.48] An experimenter wishes to compare eight treatments in blocks of
+four runs. Find a BIBD with 14 blocks and $\lambda = 3$.
+
+```{r}
+find.BIB(trt = 8, b = 14, k = 3)
+```
+
+3. [DAE 5.7] The yield of a chemical process is being studied. The two most
+important variables are thought to be pressure and temperature. Three levels of
+each factor are selected, and a factorial experiment with two replicates is
+performed. The yield data are as follows.
+
+```{r}
+chemical <- data.frame(
+  temperature = rep(c(150, 160, 170), each = 6),
+  pressure = rep(c(200, 215, 230), 6),
+  yield = c(90.4, 90.7, 90.2, 90.2, 90.6, 90.4,
+            90.1, 90.5, 89.9, 90.3, 90.6, 90.1, 
+            90.5, 90.8, 90.4, 90.7, 90.9, 90.1)) %>%
+  mutate(
+    temperature = as.factor(temperature),
+    pressure = as.factor(pressure)
+  )
+```
+
+a. Analyze the data and draw conclusions. Use $\alpha = 0.05$.
+
+```{r}
+fit3 <- lm(yield ~ temperature * pressure, data = chemical)
+anova(fit3)
+```
+
+Since the p=value for the temperature and pressure is lower than the alpha value of 0.05,
+they significantly affects the data. The interaction is not lower, so it does not 
+significantly affect the data.
+
+b. Prepare appropriate residual plots and comment on the model's adequacy.
+
+```{r}
+qqnorm(resid(fit3), main = "")
+qqline(resid(fit3), col = "red")
+```
+
+The model is slightly skewed right.
+
+c. Under what conditions would you operate this process?
+
+```{r}
+ggplot(chemical) +
+  geom_point(aes(x = temperature, y = yield, col = pressure), position = position_jitter(w = 0.1)) +
+  scale_color_brewer(palette = "Set2")
+```
+
+Highest yield is when pressure = 215 and temperature  = 170.
+
+4. [DAE 5.26] An article in the IEEE Transactions on Electron Devices describes
+a study on polysilicon doping. The experiment shown below is a variation of
+their study. The response variable is base current.
+
+```{r}
+silicon <- data.frame(
+  ions = rep(1:2, each = 6),
+  temperature = rep(c(900, 950, 1000), 4),
+  current = c(4.6, 10.15, 11.01, 4.40, 10.2, 10.58, 
+              3.20, 9.38, 10.81, 3.50, 10.02, 10.6)) %>%
+  mutate(
+    ions = as.factor(ions),
+  )
+```
+
+a. Is there evidence (at $\alpha = 0.05$) indicating that either polysilicon
+doping level or anneal temperature affects base current?
+
+```{r}
+fit4 = lm(current ~ ions + as.factor(temperature), data = silicon)
+anova(fit4)
+```
+
+
+They do affect base current, since the p-value of 0.02127 and 5.4e-09 are lower than the alpha
+value of 0.05.
+
+b. Prepare graphical displays to assist in interpreting this experiment.
+
+```{r}
+ggplot(silicon) +
+  geom_point(aes(x = ions, y = current, col = as.factor(temperature)), position = position_jitter(w = 0.1)) +
+  scale_color_brewer(palette = "Set2")
+
+ggplot(silicon) +
+  geom_point(aes(x = temperature, y = current, col = ions), position = position_jitter(w = 0.1)) +
+  scale_color_brewer(palette = "Set2")
+```
+
+
+c. Analyze the residuals and comment on model adequacy.
+
+```{r}
+qqnorm(resid(fit4), main = "")
+qqline(resid(fit4), col = "red")
+```
+
+The model is slightly skewed left.
+
+
+d. Is the model
+
+$$
+y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_{22}x^2_{2} + \beta_{12}x_{1}x_{2} + \epsilon
+$$
+supported by this experiment ($x_1$ is doping level and $x_{2}$ is temperature)?
+Estimate the parameters in this model and plot the response surface.
+
+```{r}
+
+silicon.2 = silicon
+silicon.2$ions = as.numeric(silicon.2$ions)
+
+fit5 = lm(current ~ ions * temperature + I(temperature^2), data = silicon.2)
+sum.fit5=summary(fit5)
+sum.fit5
+```
+
+Since the p-vale of 1.175e-08 is lower than the alpha value of 0.05, the model is 
+adequate.
+
+```{r}
+intercept = sum.fit5$coefficients[1,1]
+beta1 = sum.fit5$coefficients[2,1]
+beta2 = sum.fit5$coefficients[3,1]
+beta22 = sum.fit5$coefficients[4,1]
+beta12 = sum.fit5$coefficients[5,1]
+list(intercept = intercept, beta1 = beta1, beta2 = beta2, beta22 = beta22, beta12 = beta12)
+```
+
+```{r}
+silicon.new <- expand.grid(
+  ions = unique(silicon.2$ions), 
+  temperature = seq(900, 1000, by = 1)
+  )
+silicon.new$current<- predict(fit5, silicon.new)
+
+ggplot() +
+  geom_point(data = silicon, aes(x = temperature, y = current)) +
+  geom_line(data = silicon.new, aes(x = temperature, y = current)) +
+  facet_wrap(~ ions)
+```
+
+  
+5. Discussion of interaction terms.
+a. In your own words, explain what it means for there to be an interaction
+between two factors.
+
+It means that the outcome of one factor in a test is dependent on the outcome of another factor in a given test.
+
+b. In your own words, explain what it means for there to be an interaction
+between three factors.
+
+It means that the outcome of one factor in a test is dependent on the outcome of two separate factors that are dependent on each other.
+
+c. In real experiments, what do you expect to be more common, two-way
+interactions or three-way interactions? Why? Note: you can argue either way, as long as it's well-justified. Contemplating this question will prepare you for fractional factorial designs.
+
+I believe that three way interactions are more common. Each variable will take in all other factors and respond a certain way. For example, let's say someone is testing the effect of hydration, athletic performance, and nutrition on likelihood for obesity. If someone drinks and eats right, they will probably be physically fit because they take care of their bodies. Any two combinations of the dependent variables will affect the third because they can influence how a person takes care of their body.
+
+## Feedback
+
+a. How much time did you spend on this homework?
+
+A total of 5 hours.
+
+b. Which problem did you find most valuable?
+
+Problem 4d. I liked learning about the different types of Rcode that can be used to influence a model.
+
+## References
+
+[DAE] Montgomery, Douglas C. Design and analysis of experiments. John wiley &
+sons, 2017.
